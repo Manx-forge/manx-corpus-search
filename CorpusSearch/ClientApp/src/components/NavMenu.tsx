@@ -46,14 +46,38 @@ export const NavMenu = (props: { onRefreshState: () => void }) => {
                             {/*Not a NavLink as we want to replace*/}
                             <Link
                                 replace
-                                className="active"
+                                className={
+                                    location.pathname == "/"
+                                        ? "active"
+                                        : undefined
+                                }
                                 onClick={onGoHome}
                                 to="/"
                             >
-                                Home
+                                Text
+                            </Link>
+                            <Link
+                                to="/speech"
+                                className={
+                                    location.pathname.startsWith("/speech")
+                                        ? "active"
+                                        : undefined
+                                }
+                            >
+                                Speech
                             </Link>
                             <a href="/Dictionary/Cregeen">Dictionary</a>
                             <a href="/Browse">Browse All</a>
+                            <Link
+                                to="/contribute"
+                                className={
+                                    location.pathname == "/contribute"
+                                        ? "active"
+                                        : undefined
+                                }
+                            >
+                                Contribute
+                            </Link>
                         </>
                     )}
                     <a

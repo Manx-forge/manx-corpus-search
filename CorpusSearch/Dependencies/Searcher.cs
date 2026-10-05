@@ -226,6 +226,15 @@ public class Searcher(LuceneIndex luceneIndex, SearchParser parser)
         return luceneIndex.Scan(spanQuery, referenceQuery, checkTranscriptTimings);
     }
 
+    /// <summary>The speech search: matched lines rather than documents (see
+    /// <see cref="LuceneIndex.ScanLines"/>). Speech has no verse references, so no side-query</summary>
+    public (long NumberOfMatches, List<LuceneIndex.LineScanDocument> Documents) ScanLines(string query,
+        SearchOptions searchOptions, Func<string, string?, int?, bool> accept, int linesPerDocument)
+    {
+        var (spanQuery, _) = BuildQueries(query, parser.Parse(query), searchOptions);
+        return luceneIndex.ScanLines(spanQuery, accept, linesPerDocument);
+    }
+
 
     private SpanQuery ToSpanQuery(ParseResult<ExpressionToken, Expression> parsed, SearchOptions searchOptions)
     {

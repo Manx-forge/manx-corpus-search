@@ -12,6 +12,11 @@ cd /var/corpus-search/open-data/manx-search-data
 cd /var/corpus-search/closed-data
 if cd corpus-search-data-private; then git pull; else git clone https://github.com/Manx-Language-Toolkit/corpus-search-data-private.git ; fi
 
+# setup the speech corpus: read in place (Speech:OpenDataPath), so not copied below
+cd /var/corpus-search/speech-data
+if cd manx-speech-corpus; then git pull; else git clone --depth 1 https://github.com/Manx-forge/manx-speech-corpus.git ; fi
+export Speech__OpenDataPath=/var/corpus-search/speech-data/manx-speech-corpus/OpenData
+
 # setup dictionaries
 cd /var/corpus-search/dictionaries
 /app/tools/download_cregeen.sh

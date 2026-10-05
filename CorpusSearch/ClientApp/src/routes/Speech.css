@@ -1,0 +1,250 @@
+/* ============ Speech search, recording and Contribute pages ============ */
+
+.speech-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--c-secondary);
+}
+
+.speech-filters label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 0;
+}
+
+.speech-intro-note {
+    margin: 18px auto 0;
+    max-width: 560px;
+    font-family: var(--font-ui);
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--c-secondary);
+}
+
+/* ---- results: one card per recording, its matched lines inside ---- */
+.speech-results {
+    list-style: none;
+    padding: 0;
+    margin: 16px 0 0;
+}
+
+.speech-recording {
+    background: var(--c-surface);
+    border: 1px solid var(--c-border-card);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+}
+
+.speech-recording-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 12px;
+    margin-bottom: 6px;
+}
+
+.speech-recording-name {
+    font-family: var(--font-display);
+    font-size: 17px;
+    color: var(--c-heading);
+}
+
+.speech-recording-meta {
+    font-size: 12.5px;
+    color: var(--c-muted);
+}
+
+.speech-more {
+    display: inline-block;
+    margin-top: 4px;
+    font-size: 13px;
+}
+
+/* ---- a line: time | text | origin ---- */
+.speech-lines {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.speech-line {
+    display: grid;
+    grid-template-columns: 76px 1fr auto;
+    gap: 10px;
+    align-items: baseline;
+    padding: 5px 0;
+    border-top: 1px solid var(--c-border-row);
+    color: var(--c-body-results);
+    line-height: 1.5;
+}
+
+.speech-line:first-child {
+    border-top: none;
+}
+
+.speech-line-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.speech-speaker {
+    font-size: 11.5px;
+    font-weight: bold;
+    letter-spacing: 0.04em;
+    color: var(--c-muted);
+}
+
+.speech-english {
+    font-size: 13.5px;
+    font-style: italic;
+    color: var(--c-secondary);
+}
+
+.speech-line mark.textHighlight {
+    color: var(--c-accent);
+    background: var(--c-match-bg);
+    border-radius: 3px;
+    padding: 0 2px;
+}
+
+.speech-time {
+    font-family: var(--font-ui);
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    color: var(--c-link);
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+}
+
+.speech-time:hover {
+    color: var(--c-link-hover);
+}
+
+.speech-time-plain {
+    color: var(--c-muted);
+    cursor: default;
+}
+
+/* ---- human / AI badge; AI lines coloured by confidence band (D30, D37) ---- */
+.speech-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: bold;
+    white-space: nowrap;
+    border-radius: 10px;
+    padding: 1px 8px;
+    border: 1px solid transparent;
+}
+
+.speech-badge-human {
+    color: var(--c-slate);
+    border-color: var(--c-border-meta);
+}
+
+.speech-badge-ai {
+    color: var(--c-slate);
+    background: var(--c-dict-strip);
+}
+
+.speech-badge-ai.band-green {
+    color: #2F5E2B;
+    background: #E3EFD9;
+}
+
+.speech-badge-ai.band-amber {
+    color: #7A5310;
+    background: #F6E7C3;
+}
+
+.speech-badge-ai.band-red {
+    color: #8A2E22;
+    background: #F5DBD4;
+}
+
+/* ---- recording page ---- */
+.speech-work-title {
+    font-family: var(--font-display);
+    font-size: 26px;
+    color: var(--c-heading);
+    margin: 8px 0 12px;
+}
+
+.speech-work-meta {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 4px 14px;
+    font-size: 14px;
+    color: var(--c-secondary);
+    margin-bottom: 16px;
+}
+
+.speech-work-meta dt {
+    font-weight: normal;
+    color: var(--c-muted);
+}
+
+.speech-work-meta dd {
+    margin: 0;
+}
+
+.speech-work-hint {
+    font-size: 13.5px;
+    color: var(--c-muted);
+}
+
+/* ---- Contribute ---- */
+.contribute-page {
+    max-width: 680px;
+    color: var(--c-ink);
+    line-height: 1.6;
+}
+
+.contribute-page h1 {
+    font-family: var(--font-display);
+    font-size: 26px;
+    color: var(--c-heading);
+}
+
+.contribute-steps li {
+    margin-bottom: 14px;
+}
+
+.contribute-lookup {
+    display: block;
+    width: 100%;
+    margin-top: 8px;
+}
+
+.contribute-result {
+    margin-top: 8px;
+    font-size: 14px;
+    color: var(--c-secondary);
+}
+
+.contribute-note {
+    font-size: 14px;
+    color: var(--c-secondary);
+}
+
+@media (max-width: 600px) {
+    .speech-line {
+        grid-template-columns: 60px 1fr;
+    }
+
+    .speech-line-origin {
+        grid-column: 2;
+    }
+
+    .speech-work-meta {
+        grid-template-columns: 1fr;
+    }
+}

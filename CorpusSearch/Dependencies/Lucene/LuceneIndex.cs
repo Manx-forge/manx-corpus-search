@@ -74,6 +74,13 @@ public class LuceneIndex(IndexWriter indexWriter)
     public const string SUBTITLE_START = "subtitle_start";
     public const string SUBTITLE_END = "subtitle_end";
 
+    /// <summary>Speech corpus only: the line's origin, "human" or "asr" (<see cref="DocumentLine.Origin"/>)</summary>
+    public const string DOCUMENT_ORIGIN = "origin";
+    /// <summary>Speech corpus only: an ASR line's confidence, 0-100 (<see cref="DocumentLine.Confidence"/>)</summary>
+    public const string DOCUMENT_CONFIDENCE = "confidence";
+    /// <summary>Speech corpus only: per-word start times (<see cref="DocumentLine.WordStarts"/>). Stored, not indexed</summary>
+    public const string DOCUMENT_WORD_STARTS = "word_starts";
+
     /// <summary>Whether the field preserves case (so its analyzer must not case-fold)</summary>
     internal static bool IsCasedField(string field) => field is DOCUMENT_CASED_MANX or DOCUMENT_CASED_ENGLISH;
 
@@ -157,7 +164,7 @@ public class LuceneIndex(IndexWriter indexWriter)
                 new StringField(DOCUMENT_NAME, document.Name, Field.Store.YES),
                 new StringField(DOCUMENT_IDENT, document.Ident, Field.Store.YES),
                 new StringField(DOCUMENT_REAL_MANX, line.Manx, Field.Store.YES),
-                new StringField(DOCUMENT_REAL_ENGLISH, line.English, Field.Store.YES),
+                new StringField(DOCUMENT_REAL_ENGLISH, line.English ?? "", Field.Store.YES),
                 new Int32Field(DOCUMENT_LINE_NUMBER, line.CsvLineNumber, Field.Store.YES),
                 new Field(DOCUMENT_NORMALIZED_MANX, line.NormalizedManx , fieldType),
                 // TODO: Confirm that the analyzer that we use is also appropriate for English
@@ -177,6 +184,9 @@ public class LuceneIndex(IndexWriter indexWriter)
             AddField(DOCUMENT_NOTES, line.Notes);
             AddField(DOCUMENT_PAGE, line.Page.ToString());
             AddField(DOCUMENT_SPEAKER, line.Speaker);
+            AddField(DOCUMENT_ORIGIN, line.Origin);
+            line.Confidence?.Let(confidence => doc.Add(new Int32Field(DOCUMENT_CONFIDENCE, confidence, Field.Store.YES)));
+            line.WordStarts?.Let(starts => doc.Add(new StoredField(DOCUMENT_WORD_STARTS, starts)));
             if (!string.IsNullOrWhiteSpace(line.Reference))
             {
                 // tokenized and stored: searchable via its own analyzer, returned for display
@@ -227,8 +237,15 @@ public class LuceneIndex(IndexWriter indexWriter)
     /// can group matched lines into corpus documents without loading each line's stored document
     /// (the dominant cost when a common word matches tens of thousands of lines).
     /// </summary>
-    private sealed class DocumentLookup(Ident[] idents, int[] lineNumbers, long[] startTicks, long[] endTicks)
+    private sealed class DocumentLookup(Ident[] idents, int[] lineNumbers, long[] startTicks, long[] endTicks,
+        string?[] origins, int[] confidences)
     {
+        /// <summary>The line's <see cref="DOCUMENT_ORIGIN"/> (speech corpus), null elsewhere</summary>
+        public string? Origin(DocId docId) => origins[docId];
+
+        /// <summary>The line's <see cref="DOCUMENT_CONFIDENCE"/> (speech ASR lines), null elsewhere</summary>
+        public int? Confidence(DocId docId) => confidences[docId] < 0 ? null : confidences[docId];
+
         /// <summary>The corpus document ident, CsvLineNumber and created dates of the line
         /// with this docId. The dates are per line: a fragments collection's lines carry
         /// their citations' dates, everything else its document's.</summary>
@@ -284,10 +301,15 @@ public class LuceneIndex(IndexWriter indexWriter)
         var lineNumbers = new int[reader.MaxDoc];
         var startTicks = new long[reader.MaxDoc];
         var endTicks = new long[reader.MaxDoc];
+        var origins = new string?[reader.MaxDoc];
+        var confidences = new int[reader.MaxDoc];
         // one shared string instance per document: ~800 idents across ~100k lines
         var identPool = new Dictionary<Ident, Ident>();
         var fields = new HashSet<string>
-            { DOCUMENT_IDENT, DOCUMENT_LINE_NUMBER, DOCUMENT_CREATED_START, DOCUMENT_CREATED_END };
+        {
+            DOCUMENT_IDENT, DOCUMENT_LINE_NUMBER, DOCUMENT_CREATED_START, DOCUMENT_CREATED_END,
+            DOCUMENT_ORIGIN, DOCUMENT_CONFIDENCE
+        };
         for (DocId docId = 0; docId < reader.MaxDoc; docId++)
         {
             var document = reader.Document(docId, fields);
@@ -305,9 +327,12 @@ public class LuceneIndex(IndexWriter indexWriter)
             lineNumbers[docId] = document.GetInt32(DOCUMENT_LINE_NUMBER) ?? -1;
             startTicks[docId] = document.GetDateTime(DOCUMENT_CREATED_START)?.Ticks ?? 0;
             endTicks[docId] = document.GetDateTime(DOCUMENT_CREATED_END)?.Ticks ?? 0;
+            // interned: two values across the speech corpus, none elsewhere
+            origins[docId] = document.GetString(DOCUMENT_ORIGIN) is { } origin ? string.Intern(origin) : null;
+            confidences[docId] = document.GetInt32(DOCUMENT_CONFIDENCE) ?? -1;
         }
 
-        return new DocumentLookup(idents, lineNumbers, startTicks, endTicks);
+        return new DocumentLookup(idents, lineNumbers, startTicks, endTicks, origins, confidences);
     }
 
 
@@ -617,6 +642,64 @@ public class LuceneIndex(IndexWriter indexWriter)
         };
     }
 
+    /// <summary>One document's share of <see cref="ScanLines"/>: its match count, its
+    /// matched line count, and the matched lines shown</summary>
+    public sealed record LineScanDocument(Ident Ident, int Count, int MatchedLines, List<DocumentLine> Lines);
+
+    /// <summary>
+    /// The speech search: <see cref="Scan"/> per line rather than per document. Only lines
+    /// passing <paramref name="accept"/> (document ident, origin, confidence) count. Each
+    /// document returns its first <paramref name="linesPerDocument"/> matched lines in
+    /// document order, highlighted, with their timings and word start times.
+    /// </summary>
+    public (long NumberOfMatches, List<LineScanDocument> Documents) ScanLines(SpanQuery query,
+        Func<Ident, string?, int?, bool> accept, int linesPerDocument)
+    {
+        using var reader = UseReader();
+        var lookup = _documentLookup ??= BuildDocumentLookup(reader);
+
+        var spanQuery = (SpanQuery)query.Rewrite(reader);
+        var spanCollection = BuildSpanCollection(spanQuery, reader,
+            docId => accept(lookup.Get(docId).Ident, lookup.Origin(docId), lookup.Confidence(docId)));
+
+        var byIdent = new Dictionary<Ident, List<(DocId DocId, int LineNumber)>>();
+        foreach (var docId in spanCollection.DistinctDocumentIds())
+        {
+            var (ident, lineNumber, _, _) = lookup.Get(docId);
+            if (!byIdent.TryGetValue(ident, out var lines))
+            {
+                byIdent[ident] = lines = [];
+            }
+            lines.Add((docId, lineNumber));
+        }
+
+        // docID order is merge-dependent (#303): document order is the line number's
+        var shown = byIdent.ToDictionary(x => x.Key,
+            x => x.Value.OrderBy(l => l.LineNumber).Take(linesPerDocument).Select(l => l.DocId).ToList());
+        var highlightTokenSpans = CollectHighlightTokenSpans(spanQuery, reader,
+            new HashSet<DocId>(shown.Values.SelectMany(x => x)));
+        var fields = LineFields(getTranscript: true);
+        fields.Add(DOCUMENT_WORD_STARTS);
+
+        var documents = byIdent.Select(kvp => new LineScanDocument(kvp.Key,
+            kvp.Value.Sum(l => spanCollection.GetCount(l.DocId)), kvp.Value.Count,
+            shown[kvp.Key].Select(docId =>
+            {
+                var stored = reader.Document(docId, fields);
+                var line = ToDocumentLine(stored, getTranscript: true);
+                line.WordStarts = stored.GetString(DOCUMENT_WORD_STARTS);
+                line.MatchesInLine = spanCollection.GetCount(docId);
+                var highlights = ComputeHighlights(reader, docId, spanQuery.Field,
+                    (IsEnglishField(spanQuery.Field) ? line.English : line.Manx) ?? "",
+                    highlightTokenSpans.GetValueOrDefault(docId));
+                line.ManxHighlights = IsManxField(spanQuery.Field) ? highlights : null;
+                line.EnglishHighlights = IsEnglishField(spanQuery.Field) ? highlights : null;
+                return line;
+            }).ToList())).ToList();
+
+        return (spanCollection.GetTotalCount(), documents);
+    }
+
     private static readonly HashSet<string> SubtitleStartOnly = [SUBTITLE_START];
 
     /// <summary>Whether the matched lines of a recording (the 🎥 name, as the
@@ -746,7 +829,8 @@ public class LuceneIndex(IndexWriter indexWriter)
         var fieldsToLoad = new HashSet<string> { DOCUMENT_REAL_MANX, DOCUMENT_REAL_ENGLISH, DOCUMENT_NOTES,
             DOCUMENT_PAGE,
             DOCUMENT_LINE_NUMBER, DOCUMENT_ORIGINAL_MANX, DOCUMENT_ORIGINAL_ENGLISH,
-            DOCUMENT_SPEAKER, DOCUMENT_REFERENCE, DOCUMENT_CANONICAL_REFERENCE, DOCUMENT_LANGUAGE };
+            DOCUMENT_SPEAKER, DOCUMENT_REFERENCE, DOCUMENT_CANONICAL_REFERENCE, DOCUMENT_LANGUAGE,
+            DOCUMENT_ORIGIN, DOCUMENT_CONFIDENCE };
         if (getTranscript)
         {
             fieldsToLoad.Add(SUBTITLE_END);
@@ -770,7 +854,9 @@ public class LuceneIndex(IndexWriter indexWriter)
         Speaker = document.GetString(DOCUMENT_SPEAKER),
         Reference = document.GetString(DOCUMENT_REFERENCE),
         CanonicalReference = document.GetString(DOCUMENT_CANONICAL_REFERENCE),
-        Language = document.GetString(DOCUMENT_LANGUAGE)
+        Language = document.GetString(DOCUMENT_LANGUAGE),
+        Origin = document.GetString(DOCUMENT_ORIGIN),
+        Confidence = document.GetInt32(DOCUMENT_CONFIDENCE),
     };
 
     public long CountManxTerms()

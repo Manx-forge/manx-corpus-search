@@ -136,6 +136,8 @@ public class Startup(IConfiguration configuration)
         // TODO: Move config here
         services.AddSingleton<RecentDocumentsService>();
         services.AddSingleton<ContributionsService>();
+        // the speech corpus: a separate index (D4)
+        services.AddSingleton<SpeechService>();
 
         // In production, the React files will be served from this directory
         services.AddSpaStaticFiles(configuration =>
@@ -151,7 +153,8 @@ public class Startup(IConfiguration configuration)
         Searcher searcher,
         RecentDocumentsService recentDocumentsService,
         ContributionsService contributionsService,
-        CorpusVocabulary vocabulary)
+        CorpusVocabulary vocabulary,
+        SpeechService speechService)
     {
         log = logger;
         if (env.IsDevelopment())
@@ -180,6 +183,8 @@ public class Startup(IConfiguration configuration)
         // which is what tells a used word from a proposed one
         vocabulary.Init(termFrequency);
         SetupDictionaries();
+        // "Speech": { "OpenDataPath": ... } in appsettings; default SpeechData beside the server
+        speechService.Load(Configuration["Speech:OpenDataPath"]);
         ScanPhrasesInBackground(vocabulary, workService, searcher, app.ApplicationServices);
 
         try
@@ -248,7 +253,7 @@ public class Startup(IConfiguration configuration)
             // URLs which are neither a server route nor a SPA page must 404 rather
             // than serve the shell with a 200 (see SpaRouteGuard). Development is
             // excluded: there UseSpa also proxies Vite's own requests.
-            app.UseSpaRouteGuard(workService);
+            app.UseSpaRouteGuard(workService, speechService);
         }
 
         app.UseSpa(spa =>

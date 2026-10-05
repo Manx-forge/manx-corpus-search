@@ -14,13 +14,13 @@ namespace CorpusSearch.Infrastructure;
 /// </summary>
 internal static class SpaRouteGuard
 {
-    public static void UseSpaRouteGuard(this IApplicationBuilder app, WorkService workService)
+    public static void UseSpaRouteGuard(this IApplicationBuilder app, WorkService workService, SpeechService speech)
     {
         app.Use(async (context, next) =>
         {
             // /Error is UseExceptionHandler's re-execute path let it keep
             // falling through to the shell rather than turn a 500 into a 404.
-            if (context.Request.Path == "/Error" || IsSpaPage(context.Request.Path, workService))
+            if (context.Request.Path == "/Error" || IsSpaPage(context.Request.Path, workService, speech))
             {
                 await next(context);
                 return;
@@ -45,14 +45,24 @@ internal static class SpaRouteGuard
     /// The routes in ClientApp/src/App.tsx which render a page. Its catch-all
     /// (* -> NotFound) doesn't count: that's the 404 page itself.
     /// </summary>
-    internal static bool IsSpaPage(PathString path, WorkService workService)
+    internal static bool IsSpaPage(PathString path, WorkService workService, SpeechService? speech = null)
     {
         var value = (path.Value ?? "/").TrimEnd('/');
         if (value.Length == 0
             || value.Equals("/tools/youtube", StringComparison.OrdinalIgnoreCase)
-            || value.Equals("/contributions", StringComparison.OrdinalIgnoreCase))
+            || value.Equals("/contributions", StringComparison.OrdinalIgnoreCase)
+            || value.Equals("/speech", StringComparison.OrdinalIgnoreCase)
+            || value.Equals("/contribute", StringComparison.OrdinalIgnoreCase))
         {
             return true;
+        }
+
+        // /speech/<recording ident>: case-sensitive, as /docs/<ident>
+        const string speechWork = "/speech/";
+        if (value.StartsWith(speechWork, StringComparison.OrdinalIgnoreCase))
+        {
+            var ident = value[speechWork.Length..];
+            return !ident.Contains('/') && speech?.HasIdent(ident) == true;
         }
 
         const string dictionary = "/dictionary";

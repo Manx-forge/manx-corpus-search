@@ -54,7 +54,7 @@ export function segmentChunks(
  * markChunks("Ta çhengey aym", [{ start: 3, end: 10 }])
  * // => ["Ta ", <mark className="textHighlight">çhengey</mark>, " aym"]
  */
-function markChunks(
+export function markChunks(
     text: string,
     chunks: { start: number; end: number }[],
 ): ReactNode {

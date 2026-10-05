@@ -26,6 +26,18 @@ public class DocumentLine
     /// <summary>The name of the speaker in a transcription. Nullable</summary>
     public string? Speaker { get; set; }
 
+    /// <summary>Speech corpus only: "human" or "asr" (AI-generated). Null elsewhere</summary>
+    public string? Origin { get; set; }
+
+    /// <summary>Speech corpus only: an ASR line's confidence, 0-100. Null for human lines</summary>
+    public int? Confidence { get; set; }
+
+    /// <summary>Speech corpus only: the start time of each whitespace-separated word of
+    /// <see cref="Manx"/>, space-separated, "-" where the word is unaligned (words.csv).
+    /// Lets a hit link to its matched word rather than its line</summary>
+    [JsonIgnore]
+    public string? WordStarts { get; set; }
+
     /// <summary>The line's verse/chapter reference ("MS 1 Thessalonians 2.16",
     /// "CAB. II."): metadata like <see cref="Speaker"/>, kept out of the Manx
     /// token stream but searchable through its own index field</summary>

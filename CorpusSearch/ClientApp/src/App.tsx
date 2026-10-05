@@ -10,6 +10,9 @@ import { DictionarySpoken } from "./routes/DictionarySpoken"
 import { DocumentView } from "./routes/DocumentView"
 import { BitPlayer } from "./routes/BitPlayer"
 import { Contributions } from "./routes/Contributions"
+import { Speech } from "./routes/Speech"
+import { SpeechWork } from "./routes/SpeechWork"
+import { Contribute } from "./routes/Contribute"
 import { NotFound } from "./routes/NotFound"
 import { useTappableAbbrs } from "./hooks/useTappableAbbrs"
 import { isDictionaryHost } from "./utils/Host"
@@ -70,6 +73,10 @@ export const App = () => {
                     <Route path="/docs/:docId" element={<DocumentView />} />
                     <Route path={"/tools/youtube"} element={<BitPlayer />} />
                     <Route path="/contributions" element={<Contributions />} />
+                    {/*the speech corpus (D26, D33): also in Infrastructure/SpaRouteGuard.cs*/}
+                    <Route path="/speech" element={<Speech />} />
+                    <Route path="/speech/:ident" element={<SpeechWork />} />
+                    <Route path="/contribute" element={<Contribute />} />
                     <Route path="*" element={<NotFound />} />
                 </Routes>
             </ErrorBoundary>

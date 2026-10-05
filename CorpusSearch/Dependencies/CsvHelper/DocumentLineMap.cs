@@ -7,8 +7,11 @@ public class DocumentLineMap : ClassMap<DocumentLine>
 {
     public DocumentLineMap()
     {
-        Map(m => m.English);
+        // optional: a speech transcript has no English column without a ground-truth translation
+        Map(m => m.English).Optional();
         Map(m => m.Manx);
+        Map(m => m.Origin).Optional();
+        Map(m => m.Confidence).Optional();
         Map(m => m.Page).Optional();
         Map(m => m.Notes).Optional();
         Map(m => m.SubStart).Optional();
