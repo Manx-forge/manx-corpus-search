@@ -23,7 +23,7 @@
     var documents = ViewData["Documents"] as List<IDocument> ?? [];
     // the speech corpus's recordings, when ?corpus=speech asked for them
     var speech = ViewData["Speech"] as IReadOnlyCollection<SpeechDocument>;
-    // each collection of short utterances as one entry; or the one collection being listed
+    // the collections (or the one being listed), and the recordings in none
     var collections = ViewData["Collections"] as List<SpeechService.Collection> ?? [];
     var collection = ViewData["Collection"] as SpeechService.Collection;
     var platforms = new Dictionary<string, string>
@@ -48,7 +48,7 @@
             <a href="/Browse?corpus=speech" class="@(speech != null ? "active" : null)">Speech</a>
         </div>
         <div class="browse-count">@(speech == null ? $"{documents.Count:N0} documents"
-                                     : collections.Count > 0 ? $"{speech.Count:N0} recordings and {collections.Count} collections"
+                                     : collections.Count > 0 ? $"{collections.Count} collections and {speech.Count:N0} other recordings"
                                      : $"{speech.Count:N0} recordings")</div>
         <div class="browse-order">
             <span class="browse-order-label">Order by</span>
@@ -82,7 +82,7 @@
                 </span>
                 <span class="browse-text">
                     <a href="/Browse?corpus=speech&collection=@Uri.EscapeDataString(group.Key)">@group.Name</a>
-                    <span class="browse-source">a collection of @group.Count.ToString("N0") short recordings</span>
+                    <span class="browse-source">@group.Count.ToString("N0") recordings</span>
                 </span>
                 <span class="browse-col">@(platforms.GetValueOrDefault(group.Platform ?? "", group.Platform ?? ""))</span>
                 <span class="browse-col">@group.Domain</span>

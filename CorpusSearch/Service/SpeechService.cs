@@ -44,35 +44,87 @@ public partial class SpeechService
     /// <summary>Every recording, for the Browse page</summary>
     public IReadOnlyCollection<SpeechDocument> Works => works.Values.ToList();
 
-    /// <summary>A recording's collection: its folder's parent under OpenData ("common_voice/cv-24.0/validated")</summary>
-    public string CollectionOf(SpeechDocument work) =>
-        Path.GetDirectoryName(Path.GetRelativePath(root, work.LocationOnDisk ?? root))?.Replace('\\', '/') ?? "";
+    /// <summary>A recording's collection: its folder's parent under OpenData ("manx_radio/abbyr_shen_reesht"), with
+    /// the strays put back (a spoken-dictionary clip in a folder of its own, Abbyr Shen Reesht's older episodes, and
+    /// the text corpus's recordings by their series)</summary>
+    public string CollectionOf(SpeechDocument work)
+    {
+        var folder = Path.GetDirectoryName(Path.GetRelativePath(root, work.LocationOnDisk ?? root))?.Replace('\\', '/') ?? "";
+        folder = StrayFolder().Replace(folder, "");
+        return work.CorpusWork switch
+        {
+            { } w when w.StartsWith("YouTube-Skeealyn-Vannin") => "youtube/manx_national_heritage/skeealyn_vannin",
+            { } w when w.StartsWith("UOSH-") => "youtube/uosh",
+            _ => folder,
+        };
+    }
 
     /// <param name="Years">"1990-2023" or "2015": the span of its recordings' dates; null if none is dated</param>
     public record Collection(string Key, string Name, string? Platform, string? Domain, string? Origin, int Count,
         string? Years);
 
-    /// <summary>Names for the utterance collections, where the folder's own is opaque</summary>
+    /// <summary>The collections' names; an unlisted folder is named after itself</summary>
     private static readonly Dictionary<string, string> CollectionNames = new()
     {
+        ["clilstore/misc"] = "Clilstore: Manx readings",
         ["common_voice/cv-24.0/validated"] = "Common Voice 24.0: read sentences",
         ["common_voice/sps-2.0"] = "Common Voice Spontaneous Speech 2.0",
-        ["learn_manx/spkn_dict"] = "Learn Manx: Spoken Dictionary",
         ["learn_manx/1000_words"] = "Learn Manx: 1000 Words",
-        ["youtube/learn_manx/island_of_culture"] = "Learn Manx: Island of Culture",
+        ["learn_manx/adult_manx"] = "Learn Manx: Loayr Gaelg",
+        ["learn_manx/american_inheritance"] = "Learn Manx: American Inheritance",
+        ["learn_manx/cowag"] = "Learn Manx: Cowag",
+        ["learn_manx/podcast_gaelgagh"] = "Learn Manx: Learning Manx podcast",
+        ["learn_manx/shen_recortyssyn"] = "Learn Manx: Shenn Recortyssyn",
+        ["learn_manx/short_stories/bob_carswell"] = "Learn Manx: Short stories by John Pilling, translated by Bob Carswell",
+        ["learn_manx/short_stories/intermediate"] = "Learn Manx: Skeealyn Zen",
+        ["learn_manx/site_scrape"] = "Learn Manx: website audio",
+        ["learn_manx/spkn_dict"] = "Learn Manx: Spoken Dictionary",
+        ["learn_manx/spoken_dictionary_rejects"] = "Learn Manx app: other recordings",
+        ["manx_radio/abbyr_shen_reesht"] = "Abbyr Shen Reesht (Manx Radio)",
+        ["saysomething/lessons"] = "Say Something in Manx",
+        ["youtube/culture_vannin"] = "Culture Vannin",
+        ["youtube/de_linguis"] = "De Linguis: Cooishyn Gailckagh",
+        ["youtube/learn_manx/a_walk_around_cregneash"] = "A Walk Around Cregneash",
+        ["youtube/learn_manx/adrian_cain_ayns_purt_le_moirrey"] = "Adrian Cain ayns Purt le Moirrey",
+        ["youtube/learn_manx/archibald_cregeen"] = "Archibald Cregeen",
+        ["youtube/learn_manx/cappan_y_theihll"] = "Cappan y Theihll",
+        ["youtube/learn_manx/cliaghtaghyn_as_skeealyn_-_traditions_and_stories"] = "Cliaghtaghyn as Skeealyn: Traditions and Stories",
+        ["youtube/learn_manx/conversations_with"] = "Conversations with…",
+        ["youtube/learn_manx/cooish"] = "Yn Chooish",
+        ["youtube/learn_manx/cuchulainn"] = "Cuchulainn",
+        ["youtube/learn_manx/daa_whooinney_ayns_baatey"] = "Daa Whooinney ayns Baatey",
+        ["youtube/learn_manx/gaelg_son_paarantyn"] = "Gaelg son Paarantyn",
+        ["youtube/learn_manx/island_of_culture"] = "Island of Culture",
+        ["youtube/learn_manx/laa_mie_er_y_cholloo"] = "Laa Mie er y Cholloo",
+        ["youtube/learn_manx/loayrt_rish"] = "Loayrt rish…",
+        ["youtube/learn_manx/loayrt_taggloo_cowag"] = "Loayrt, Taggloo, Cowag",
+        ["youtube/learn_manx/manannan"] = "Manannan",
+        ["youtube/learn_manx/shooyl_mygeayrt_meayll_marish_davy_fisher"] = "Shooyl mygeayrt Meayll marish Davy Fisher",
+        ["youtube/learn_manx/various_language_videos"] = "Learn Manx: various videos",
+        ["youtube/learn_manx/yn_cholloo"] = "Yn Cholloo",
+        ["youtube/manx-search-data"] = "Recordings from the text corpus",
+        ["youtube/manx_national_heritage/foillan_film_archive"] = "Foillan Films (Manx National Heritage)",
+        ["youtube/manx_national_heritage/skeealyn_vannin"] = "Skeealyn Vannin (Irish Folklore Commission, 1948)",
+        ["youtube/uosh"] = "UOSH: native speakers, 1950s",
     };
 
-    /// <summary>Collections of short utterances (single sentences, dictionary words): at least 10 recordings,
-    /// 80% of them under 30 s. Browse lists each as one entry rather than thousands of clips</summary>
-    public List<Collection> UtteranceCollections() => works.Values
+    /// <summary>Every collection of two or more recordings: Browse lists these rather than the recordings</summary>
+    public List<Collection> Collections() => works.Values
         .GroupBy(CollectionOf)
-        .Where(g => g.Count() >= 10 && g.Count(x => x.Duration is < 30) >= 0.8 * g.Count())
-        .Select(g => new Collection(g.Key,
-            CollectionNames.GetValueOrDefault(g.Key) ?? string.Join(": ", g.Key.Split('/').Skip(1)),
+        .Where(g => g.Count() >= 2)
+        // oldest first, the undated last (Browse's default order is by date)
+        .OrderBy(g => g.Min(x => x.CreatedCircaStart) ?? DateTime.MaxValue)
+        .Select(g => new Collection(g.Key, CollectionNames.GetValueOrDefault(g.Key) ?? FolderName(g.Key),
             Common(g.Select(x => x.Platform)), Common(g.Select(x => x.Domain)), Common(g.Select(x => x.Origin)),
             g.Count(), Years(g)))
-        .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
         .ToList();
+
+    /// <summary>"youtube/learn_manx/yn_cholloo" -> "Yn cholloo"</summary>
+    private static string FolderName(string key)
+    {
+        var name = key.Split('/')[^1].Replace('_', ' ');
+        return name.Length == 0 ? key : char.ToUpperInvariant(name[0]) + name[1..];
+    }
 
     private static string? Years(IEnumerable<SpeechDocument> works)
     {
@@ -264,6 +316,10 @@ public partial class SpeechService
     public Statistics GetStatistics() => new(works.Count,
         works.Values.Count(x => x.Origin == "human"), works.Values.Count(x => x.Origin == "asr"),
         Math.Round(works.Values.Sum(x => x.Duration ?? 0) / 3600, 1));
+
+    /// <summary>A folder of one spoken-dictionary clip (".../spkn_dict/05506113"), or Abbyr Shen Reesht's "/episodes"</summary>
+    [GeneratedRegex(@"/(\d{5,}|episodes)$")]
+    private static partial Regex StrayFolder();
 
     [GeneratedRegex(@"\s+")]
     private static partial Regex Whitespace();

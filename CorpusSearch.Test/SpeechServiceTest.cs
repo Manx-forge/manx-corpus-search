@@ -198,9 +198,9 @@ public class SpeechServiceTest
     }
 
     [Test]
-    public void ShortUtterancesGroupIntoACollectionAndLongRecordingsDoNot()
+    public void RecordingsGroupIntoTheirCollectionsAndSinglesStayAlone()
     {
-        var collection = speech.UtteranceCollections().Single();
+        var collection = speech.Collections().Single();  // the other folders hold one recording each
         Assert.That(collection.Key, Is.EqualTo("common_voice/cv"));
         Assert.That(collection.Count, Is.EqualTo(10));
         Assert.That(collection.Platform, Is.EqualTo("common_voice"));

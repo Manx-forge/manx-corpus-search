@@ -27,8 +27,8 @@ public class BrowseController(
         ViewData["Documents"] = await workService.GetAll();
         if (corpus == "speech")
         {
-            // long-form recordings, with each collection of short utterances as one entry (or one collection's)
-            var collections = speech.UtteranceCollections();
+            // the collections, and the few recordings in none (or one collection's recordings)
+            var collections = speech.Collections();
             var grouped = collections.Select(x => x.Key).ToHashSet();
             ViewData["Speech"] = speech.Works.Where(x => collection != null
                 ? speech.CollectionOf(x) == collection
