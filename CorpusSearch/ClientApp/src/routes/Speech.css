@@ -1,21 +1,5 @@
 /* ============ Speech search, recording and Contribute pages ============ */
 
-.speech-filters {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px 18px;
-    margin-top: 12px;
-    font-size: 13px;
-    color: var(--c-secondary);
-}
-
-.speech-filters label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 0;
-}
-
 .speech-intro-note {
     margin: 18px auto 0;
     max-width: 560px;

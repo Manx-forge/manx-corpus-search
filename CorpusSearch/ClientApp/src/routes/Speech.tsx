@@ -29,7 +29,8 @@ import {
     SpeechSearchResponse,
     SpeechStatistics,
 } from "../api/SpeechApi"
-import { SearchLanguage } from "./Home"
+import { HomeData, SearchLanguage } from "./Home"
+import AdvancedOptions, { DateRange } from "../components/AdvancedOptions"
 
 type Result =
     { status: "success"; data: SpeechSearchResponse } | { status: "error" }
@@ -45,8 +46,19 @@ export const Speech = () => {
     const [query, setQueryState] = useState(urlQuery)
     useEffect(() => setQueryState(urlQuery), [urlQuery])
 
+    // as Home's Advanced options; the speech filters ride in the URL
+    const [dateRange, setDateRange] = useState<DateRange>({
+        start: 1500,
+        end: HomeData.currentYear,
+    })
+    const [matchPhrase, setMatchPhrase] = useState(false)
+    const [options, setOptions] = useState(defaultSearchOptions)
     const filters: SpeechFilters = {
         origin: (searchParams.get("origin") as Origin | null) ?? undefined,
+        platform: searchParams.get("platform") ?? undefined,
+        minConfidence: Number(searchParams.get("minConfidence")) || undefined,
+        minYear: dateRange.start,
+        maxYear: dateRange.end,
     }
     const setParam = (key: string, value: string | undefined) => {
         const next = new URLSearchParams(searchParams)
@@ -78,10 +90,10 @@ export const Speech = () => {
         startTransition(async () => {
             try {
                 const data = await searchSpeech(
-                    query,
+                    matchPhrase ? `*${query}*` : query,
                     language == "English",
                     JSON.parse(filterKey) as SpeechFilters,
-                    defaultSearchOptions,
+                    options,
                     controller.signal,
                 )
                 if (!controller.signal.aborted)
@@ -93,7 +105,7 @@ export const Speech = () => {
             }
         })
         return () => controller.abort()
-    }, [query, language, filterKey, tooLong])
+    }, [query, language, filterKey, tooLong, matchPhrase, options])
 
     const statsPromise = useMemo(
         () => getSpeechStatistics().catch(() => "error" as const),
@@ -118,8 +130,13 @@ export const Speech = () => {
                     }
                 />
             </div>
-            <div className="speech-filters">
-                <label>
+            <AdvancedOptions
+                onDateRangeChange={setDateRange}
+                onMatchChange={setMatchPhrase}
+                options={options}
+                onOptionsChange={setOptions}
+            >
+                <label className="advanced-options-match">
                     Transcribed by
                     <select
                         className="corpus-select"
@@ -131,7 +148,45 @@ export const Speech = () => {
                         <option value="asr">AI</option>
                     </select>
                 </label>
-            </div>
+                <label className="advanced-options-match">
+                    Source
+                    <select
+                        className="corpus-select"
+                        value={filters.platform ?? ""}
+                        onChange={(e) => setParam("platform", e.target.value)}
+                    >
+                        <option value="">Any</option>
+                        {Object.entries(platformNames).map(([key, name]) => (
+                            <option key={key} value={key}>
+                                {name}
+                            </option>
+                        ))}
+                    </select>
+                </label>
+                <label
+                    className="advanced-options-match"
+                    title="Hide AI-transcribed lines the model was less sure of. Human lines are always shown."
+                >
+                    AI confidence at least
+                    <input
+                        type="number"
+                        className="corpus-num-input"
+                        min={0}
+                        max={100}
+                        step={5}
+                        value={filters.minConfidence ?? 0}
+                        onChange={(e) =>
+                            setParam(
+                                "minConfidence",
+                                Number(e.target.value) > 0
+                                    ? e.target.value
+                                    : undefined,
+                            )
+                        }
+                    />
+                    %
+                </label>
+            </AdvancedOptions>
             {query.trim() == "" ? (
                 <Suspense fallback={<Progress />}>
                     <SpeechIntro statsPromise={statsPromise} />

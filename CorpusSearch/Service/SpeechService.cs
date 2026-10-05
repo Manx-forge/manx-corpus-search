@@ -48,7 +48,9 @@ public partial class SpeechService
     public string CollectionOf(SpeechDocument work) =>
         Path.GetDirectoryName(Path.GetRelativePath(root, work.LocationOnDisk ?? root))?.Replace('\\', '/') ?? "";
 
-    public record Collection(string Key, string Name, string? Platform, string? Domain, string? Origin, int Count);
+    /// <param name="Years">"1990-2023" or "2015": the span of its recordings' dates; null if none is dated</param>
+    public record Collection(string Key, string Name, string? Platform, string? Domain, string? Origin, int Count,
+        string? Years);
 
     /// <summary>Names for the utterance collections, where the folder's own is opaque</summary>
     private static readonly Dictionary<string, string> CollectionNames = new()
@@ -68,9 +70,17 @@ public partial class SpeechService
         .Select(g => new Collection(g.Key,
             CollectionNames.GetValueOrDefault(g.Key) ?? string.Join(": ", g.Key.Split('/').Skip(1)),
             Common(g.Select(x => x.Platform)), Common(g.Select(x => x.Domain)), Common(g.Select(x => x.Origin)),
-            g.Count()))
+            g.Count(), Years(g)))
         .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
         .ToList();
+
+    private static string? Years(IEnumerable<SpeechDocument> works)
+    {
+        var years = works.SelectMany(x => new[] { x.CreatedCircaStart?.Year, x.CreatedCircaEnd?.Year })
+            .OfType<int>().ToList();
+        return years.Count == 0 ? null
+            : years.Min() == years.Max() ? $"{years.Min()}" : $"{years.Min()}-{years.Max()}";
+    }
 
     private static string? Common(IEnumerable<string?> values) =>
         values.Where(x => x != null).GroupBy(x => x).OrderByDescending(g => g.Count()).FirstOrDefault()?.Key;

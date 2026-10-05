@@ -74,7 +74,12 @@
         @foreach (var group in collections)
         {
             <div class="browse-row" data-title="@group.Name">
-                <span class="browse-year"><span class="year-badge">@group.Count.ToString("N0")</span></span>
+                <span class="browse-year">
+                    @if (group.Years != null)
+                    {
+                        <span class="year-badge">@group.Years</span>
+                    }
+                </span>
                 <span class="browse-text">
                     <a href="/Browse?corpus=speech&collection=@Uri.EscapeDataString(group.Key)">@group.Name</a>
                     <span class="browse-source">a collection of @group.Count.ToString("N0") short recordings</span>
