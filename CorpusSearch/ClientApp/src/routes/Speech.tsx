@@ -127,7 +127,7 @@ export const Speech = () => {
                         onChange={(e) => setParam("origin", e.target.value)}
                     >
                         <option value="">Anyone</option>
-                        <option value="human">People</option>
+                        <option value="human">Human</option>
                         <option value="asr">AI</option>
                     </select>
                 </label>
