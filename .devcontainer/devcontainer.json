@@ -1,0 +1,17 @@
+// "Open in Codespace" runs the site with both corpora: the text corpus (david-allison/manx-search-data) and the
+// speech corpus (Manx-forge/manx-speech-corpus), cloned shallow beside the repo. The site opens in the browser once
+// both are loaded (a few minutes on first start). See .devcontainer/start.sh.
+{
+    "name": "Manx Corpus Search",
+    "image": "mcr.microsoft.com/devcontainers/dotnet:1-10.0",
+    "features": {
+        "ghcr.io/devcontainers/features/node:1": { "version": "22" }
+    },
+    "hostRequirements": { "memory": "4gb" },
+    "postCreateCommand": "bash .devcontainer/start.sh build",
+    "postStartCommand": "bash .devcontainer/start.sh run",
+    "forwardPorts": [5000],
+    "portsAttributes": {
+        "5000": { "label": "Corpus Search", "onAutoForward": "openBrowser" }
+    }
+}
