@@ -17,6 +17,6 @@ else
     cd CorpusSearch  # the content root: the client is served from ClientApp/build
     ASPNETCORE_ENVIRONMENT=Production ASPNETCORE_URLS=http://0.0.0.0:5000 \
         Loading__OpenDataPath="$DATA/text/OpenData" Speech__OpenDataPath="$DATA/speech/OpenData" \
-        nohup dotnet bin/Release/net10.0/CorpusSearch.dll > /tmp/corpus-search.log 2>&1 &
-    echo "Loading both corpora (a few minutes): the site opens on port 5000 when ready. Log: /tmp/corpus-search.log"
+        setsid nohup dotnet bin/Release/net10.0/CorpusSearch.dll > /tmp/corpus-search.log 2>&1 < /dev/null &  # detached: the hook's exit must not kill it
+    echo "Loading both corpora (a few minutes). Then open the Ports tab, port 5000, globe icon. Log: /tmp/corpus-search.log"
 fi
