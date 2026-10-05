@@ -198,13 +198,15 @@ public class SpeechServiceTest
     }
 
     [Test]
-    public void RecordingsGroupIntoTheirCollectionsAndSinglesStayAlone()
+    public void RecordingsGroupIntoTheirCollectionsAndLoneVideosIntoYouTubeOther()
     {
         var collection = speech.Collections().Single();  // the other folders hold one recording each
         Assert.That(collection.Key, Is.EqualTo("common_voice/cv"));
         Assert.That(collection.Count, Is.EqualTo(10));
         Assert.That(collection.Platform, Is.EqualTo("common_voice"));
-        Assert.That(speech.CollectionOf(speech.Works.Single(x => x.Ident == "speech-0001")), Is.EqualTo("youtube/demo"));
+        // a YouTube folder of one video
+        Assert.That(speech.CollectionOf(speech.Works.Single(x => x.Ident == "speech-0001")), Is.EqualTo("youtube/other"));
+        Assert.That(collection.Hours, Is.EqualTo(40.0 / 3600).Within(1e-9));
     }
 
     [TestCase("https://youtu.be/abcdefghijk")]

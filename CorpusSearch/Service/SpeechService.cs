@@ -31,6 +31,8 @@ public partial class SpeechService
     private readonly Searcher searcher;
     private readonly ILogger<SpeechService> log;
     private readonly ConcurrentDictionary<string, SpeechDocument> works = new();
+    // recordings per folder, for CollectionOf
+    private Dictionary<string, int> folderSizes = [];
     private string root = "";
 
     public SpeechService(SearchParser parser, ILogger<SpeechService> log)
@@ -49,19 +51,25 @@ public partial class SpeechService
     /// the text corpus's recordings by their series)</summary>
     public string CollectionOf(SpeechDocument work)
     {
-        var folder = Path.GetDirectoryName(Path.GetRelativePath(root, work.LocationOnDisk ?? root))?.Replace('\\', '/') ?? "";
-        folder = StrayFolder().Replace(folder, "");
+        var folder = Folder(work);
         return work.CorpusWork switch
         {
             { } w when w.StartsWith("YouTube-Skeealyn-Vannin") => "youtube/manx_national_heritage/skeealyn_vannin",
             { } w when w.StartsWith("UOSH-") => "youtube/uosh",
+            // the text corpus's other videos, and YouTube folders of a single video
+            _ when folder == "youtube/manx-search-data"
+                   || (work.Platform == "youtube" && folderSizes.GetValueOrDefault(folder) == 1) => "youtube/other",
             _ => folder,
         };
     }
 
+    private string Folder(SpeechDocument work) => StrayFolder().Replace(
+        Path.GetDirectoryName(Path.GetRelativePath(root, work.LocationOnDisk ?? root))?.Replace('\\', '/') ?? "", "");
+
     /// <param name="Years">"1990-2023" or "2015": the span of its recordings' dates; null if none is dated</param>
+    /// <param name="Hours">the recordings' total length</param>
     public record Collection(string Key, string Name, string? Platform, string? Domain, string? Origin, int Count,
-        string? Years);
+        string? Years, double Hours);
 
     /// <summary>The collections' names; an unlisted folder is named after itself</summary>
     private static readonly Dictionary<string, string> CollectionNames = new()
@@ -102,7 +110,7 @@ public partial class SpeechService
         ["youtube/learn_manx/shooyl_mygeayrt_meayll_marish_davy_fisher"] = "Shooyl mygeayrt Meayll marish Davy Fisher",
         ["youtube/learn_manx/various_language_videos"] = "Learn Manx: various videos",
         ["youtube/learn_manx/yn_cholloo"] = "Yn Cholloo",
-        ["youtube/manx-search-data"] = "Recordings from the text corpus",
+        ["youtube/other"] = "YouTube Other",
         ["youtube/manx_national_heritage/foillan_film_archive"] = "Foillan Films (Manx National Heritage)",
         ["youtube/manx_national_heritage/skeealyn_vannin"] = "Skeealyn Vannin (Irish Folklore Commission, 1948)",
         ["youtube/uosh"] = "UOSH: native speakers, 1950s",
@@ -116,7 +124,7 @@ public partial class SpeechService
         .OrderBy(g => g.Min(x => x.CreatedCircaStart) ?? DateTime.MaxValue)
         .Select(g => new Collection(g.Key, CollectionNames.GetValueOrDefault(g.Key) ?? FolderName(g.Key),
             Common(g.Select(x => x.Platform)), Common(g.Select(x => x.Domain)), Common(g.Select(x => x.Origin)),
-            g.Count(), Years(g)))
+            g.Count(), Years(g), g.Sum(x => x.Duration ?? 0) / 3600))
         .ToList();
 
     /// <summary>"youtube/learn_manx/yn_cholloo" -> "Yn cholloo"</summary>
@@ -174,6 +182,7 @@ public partial class SpeechService
             }
         });
         index.Compact();
+        folderSizes = works.Values.GroupBy(Folder).ToDictionary(g => g.Key, g => g.Count());
         log.LogInformation("Loaded {Count} speech recordings in {Milliseconds}ms", works.Count, stopwatch.ElapsedMilliseconds);
     }
 
