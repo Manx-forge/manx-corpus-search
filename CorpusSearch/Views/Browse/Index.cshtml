@@ -95,7 +95,9 @@
             @* dated first (most of the undated are single Common Voice sentences), then by title *@
             foreach (var recording in speech.OrderBy(x => x.CreatedCircaStart == null)
                          .ThenBy(x => x.CreatedCircaStart)
-                         .ThenBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+                         // numbers in order: Track 2 before Track 10
+                         .ThenBy(x => x.Name, StringComparer.Create(System.Globalization.CultureInfo.InvariantCulture,
+                             System.Globalization.CompareOptions.NumericOrdering | System.Globalization.CompareOptions.IgnoreCase))
                          .ThenBy(x => x.Ident, StringComparer.Ordinal))
             {
                 var year = recording.GetFullYear();

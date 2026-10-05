@@ -29,8 +29,7 @@ import {
     SpeechSearchResponse,
     SpeechStatistics,
 } from "../api/SpeechApi"
-import { HomeData, SearchLanguage } from "./Home"
-import AdvancedOptions, { DateRange } from "../components/AdvancedOptions"
+import { SearchLanguage } from "./Home"
 
 type Result =
     { status: "success"; data: SpeechSearchResponse } | { status: "error" }
@@ -46,19 +45,11 @@ export const Speech = () => {
     const [query, setQueryState] = useState(urlQuery)
     useEffect(() => setQueryState(urlQuery), [urlQuery])
 
-    // as Home's Advanced options; the speech filters ride in the URL
-    const [dateRange, setDateRange] = useState<DateRange>({
-        start: 1500,
-        end: HomeData.currentYear,
-    })
-    const [matchPhrase, setMatchPhrase] = useState(false)
-    const [options, setOptions] = useState(defaultSearchOptions)
+    // the filters ride in the URL
     const filters: SpeechFilters = {
         origin: (searchParams.get("origin") as Origin | null) ?? undefined,
         platform: searchParams.get("platform") ?? undefined,
         minConfidence: Number(searchParams.get("minConfidence")) || undefined,
-        minYear: dateRange.start,
-        maxYear: dateRange.end,
     }
     const setParam = (key: string, value: string | undefined) => {
         const next = new URLSearchParams(searchParams)
@@ -90,10 +81,10 @@ export const Speech = () => {
         startTransition(async () => {
             try {
                 const data = await searchSpeech(
-                    matchPhrase ? `*${query}*` : query,
+                    query,
                     language == "English",
                     JSON.parse(filterKey) as SpeechFilters,
-                    options,
+                    defaultSearchOptions,
                     controller.signal,
                 )
                 if (!controller.signal.aborted)
@@ -105,7 +96,7 @@ export const Speech = () => {
             }
         })
         return () => controller.abort()
-    }, [query, language, filterKey, tooLong, matchPhrase, options])
+    }, [query, language, filterKey, tooLong])
 
     const statsPromise = useMemo(
         () => getSpeechStatistics().catch(() => "error" as const),
@@ -130,63 +121,66 @@ export const Speech = () => {
                     }
                 />
             </div>
-            <AdvancedOptions
-                onDateRangeChange={setDateRange}
-                onMatchChange={setMatchPhrase}
-                options={options}
-                onOptionsChange={setOptions}
-            >
-                <label className="advanced-options-match">
-                    Transcribed by
-                    <select
-                        className="corpus-select"
-                        value={filters.origin ?? ""}
-                        onChange={(e) => setParam("origin", e.target.value)}
+            {/*the text search's Advanced options panel, holding the speech filters*/}
+            <details className="advanced-options">
+                <summary>Advanced options</summary>
+                <div className="advanced-options-content">
+                    <label className="advanced-options-match">
+                        Transcribed by
+                        <select
+                            className="corpus-select"
+                            value={filters.origin ?? ""}
+                            onChange={(e) => setParam("origin", e.target.value)}
+                        >
+                            <option value="">Any</option>
+                            <option value="human">Human</option>
+                            <option value="asr">AI</option>
+                        </select>
+                    </label>
+                    <label className="advanced-options-match">
+                        Source
+                        <select
+                            className="corpus-select"
+                            value={filters.platform ?? ""}
+                            onChange={(e) =>
+                                setParam("platform", e.target.value)
+                            }
+                        >
+                            <option value="">Any</option>
+                            {Object.entries(platformNames).map(
+                                ([key, name]) => (
+                                    <option key={key} value={key}>
+                                        {name}
+                                    </option>
+                                ),
+                            )}
+                        </select>
+                    </label>
+                    <label
+                        className="advanced-options-match"
+                        title="Hide AI-transcribed lines the model was less sure of. Human lines are always shown."
                     >
-                        <option value="">Any</option>
-                        <option value="human">Human</option>
-                        <option value="asr">AI</option>
-                    </select>
-                </label>
-                <label className="advanced-options-match">
-                    Source
-                    <select
-                        className="corpus-select"
-                        value={filters.platform ?? ""}
-                        onChange={(e) => setParam("platform", e.target.value)}
-                    >
-                        <option value="">Any</option>
-                        {Object.entries(platformNames).map(([key, name]) => (
-                            <option key={key} value={key}>
-                                {name}
-                            </option>
-                        ))}
-                    </select>
-                </label>
-                <label
-                    className="advanced-options-match"
-                    title="Hide AI-transcribed lines the model was less sure of. Human lines are always shown."
-                >
-                    AI confidence at least
-                    <input
-                        type="number"
-                        className="corpus-num-input"
-                        min={0}
-                        max={100}
-                        step={5}
-                        value={filters.minConfidence ?? 0}
-                        onChange={(e) =>
-                            setParam(
-                                "minConfidence",
-                                Number(e.target.value) > 0
-                                    ? e.target.value
-                                    : undefined,
-                            )
-                        }
-                    />
-                    %
-                </label>
-            </AdvancedOptions>
+                        AI confidence at least
+                        <input
+                            type="number"
+                            className="corpus-num-input"
+                            min={0}
+                            max={100}
+                            step={5}
+                            value={filters.minConfidence ?? 0}
+                            onChange={(e) =>
+                                setParam(
+                                    "minConfidence",
+                                    Number(e.target.value) > 0
+                                        ? e.target.value
+                                        : undefined,
+                                )
+                            }
+                        />
+                        %
+                    </label>
+                </div>
+            </details>
             {query.trim() == "" ? (
                 <Suspense fallback={<Progress />}>
                     <SpeechIntro statsPromise={statsPromise} />

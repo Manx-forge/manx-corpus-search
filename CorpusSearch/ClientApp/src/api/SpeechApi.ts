@@ -52,9 +52,6 @@ export type SpeechFilters = {
     platform?: string
     /** hide AI lines below this confidence (0-100); human lines always pass */
     minConfidence?: number
-    /** undated recordings pass a date range */
-    minYear?: number
-    maxYear?: number
 }
 
 export type SpeechWork = {
