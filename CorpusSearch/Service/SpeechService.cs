@@ -122,6 +122,7 @@ public partial class SpeechService
         .Where(g => g.Count() >= 2)
         // oldest first, the undated last (Browse's default order is by date)
         .OrderBy(g => g.Min(x => x.CreatedCircaStart) ?? DateTime.MaxValue)
+        .ThenBy(g => CollectionNames.GetValueOrDefault(g.Key) ?? FolderName(g.Key), StringComparer.OrdinalIgnoreCase)
         .Select(g => new Collection(g.Key, CollectionNames.GetValueOrDefault(g.Key) ?? FolderName(g.Key),
             Common(g.Select(x => x.Platform)), Common(g.Select(x => x.Domain)), Common(g.Select(x => x.Origin)),
             g.Count(), Years(g), g.Sum(x => x.Duration ?? 0) / 3600))
