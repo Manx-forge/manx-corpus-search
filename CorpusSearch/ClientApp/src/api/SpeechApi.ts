@@ -49,8 +49,6 @@ export type SpeechSearchResponse = {
 
 export type SpeechFilters = {
     origin?: Origin
-    minConfidence?: number
-    platform?: string
 }
 
 export type SpeechWork = {

@@ -20,15 +20,26 @@
 @{
     ViewData["ActiveNav"] = "browse";
     var documents = ViewData["Documents"] as List<IDocument> ?? [];
+    // the speech corpus's recordings, when ?corpus=speech asked for them
+    var speech = ViewData["Speech"] as IReadOnlyCollection<SpeechDocument>;
+    var platforms = new Dictionary<string, string>
+    {
+        ["youtube"] = "YouTube", ["manx_radio"] = "Manx Radio", ["learn_manx"] = "Learn Manx",
+        ["clilstore"] = "Clilstore", ["common_voice"] = "Common Voice", ["saysomething"] = "Say Something in Manx",
+    };
 }
 
 @await Html.PartialAsync("_SiteHeader")
 
 <div class="page-main">
-    <h1 class="page-title">Full Document Listing</h1>
+    <h1 class="page-title">@(speech == null ? "Full Document Listing" : "Full Recording Listing")</h1>
 
     <div class="browse-controls">
-        <div class="browse-count">@documents.Count.ToString("N0") documents</div>
+        <div class="seg-control">
+            <a href="/Browse" class="@(speech == null ? "active" : null)">Text</a>
+            <a href="/Browse?corpus=speech" class="@(speech != null ? "active" : null)">Speech</a>
+        </div>
+        <div class="browse-count">@(speech == null ? $"{documents.Count:N0} documents" : $"{speech.Count:N0} recordings")</div>
         <div class="browse-order">
             <span class="browse-order-label">Order by</span>
             <div class="seg-control">
@@ -38,8 +49,53 @@
         </div>
     </div>
 
-    <div class="browse-list" id="browse-list">
-        @foreach (var document in documents.OrderBy(x => x.CreatedCircaStart)
+    @if (speech != null)
+    {
+        <div class="browse-row browse-head">
+            <span class="browse-year">Year</span>
+            <span class="browse-text">Recording</span>
+            <span class="browse-col">Source</span>
+            <span class="browse-col">Domain</span>
+            <span class="browse-col">Transcript</span>
+            <span class="browse-col">Link</span>
+        </div>
+    }
+    <div class="browse-list @(speech != null ? "browse-speech" : null)" id="browse-list">
+        @if (speech != null)
+        {
+            @* dated first (most of the undated are single Common Voice sentences), then by title *@
+            foreach (var recording in speech.OrderBy(x => x.CreatedCircaStart == null)
+                         .ThenBy(x => x.CreatedCircaStart)
+                         .ThenBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+                         .ThenBy(x => x.Ident, StringComparer.Ordinal))
+            {
+                var year = recording.GetFullYear();
+                var host = Uri.TryCreate(recording.Source, UriKind.Absolute, out var url) ? url.Host.Replace("www.", "") : null;
+                <div class="browse-row" data-title="@recording.Name">
+                    <span class="browse-year">
+                        @if (!string.IsNullOrEmpty(year))
+                        {
+                            <span class="year-badge">@year</span>
+                        }
+                    </span>
+                    <span class="browse-text">
+                        <a href="/speech/@Uri.EscapeDataString(recording.Ident)">@recording.Name</a>
+                    </span>
+                    <span class="browse-col">@(platforms.GetValueOrDefault(recording.Platform ?? "", recording.Platform ?? ""))</span>
+                    <span class="browse-col">@recording.Domain</span>
+                    <span class="browse-col">@(recording.Origin == "asr" ? "AI" : "Human")</span>
+                    <span class="browse-col">
+                        @if (host != null && recording.LinkStatus == "ok")
+                        {
+                            <a class="browse-link" href="@recording.Source" target="_blank" rel="noreferrer">@host</a>
+                        }
+                    </span>
+                </div>
+            }
+        }
+        else
+        {
+        foreach (var document in documents.OrderBy(x => x.CreatedCircaStart)
                       .ThenBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
                       .ThenBy(x => x.Ident, StringComparer.Ordinal))
         {
@@ -59,6 +115,7 @@
                     }
                 </span>
             </div>
+        }
         }
     </div>
 

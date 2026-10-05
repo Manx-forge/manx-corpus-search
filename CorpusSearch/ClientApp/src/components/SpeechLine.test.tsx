@@ -30,7 +30,7 @@ describe("OriginBadge", () => {
         const { container } = render(
             <OriginBadge origin="asr" confidence={95} />,
         )
-        screen.getByText("AI 95%")
+        screen.getByText("AI · 95% confidence")
         expect(container.querySelector(".band-green")).not.toBeNull()
     })
 

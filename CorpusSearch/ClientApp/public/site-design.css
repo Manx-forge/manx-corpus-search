@@ -106,6 +106,60 @@
     text-align: right;
 }
 
+/* the speech listing (/Browse?corpus=speech): a column per piece of metadata, labelled by a header row */
+.browse-col {
+    width: 110px;
+    flex-shrink: 0;
+    font-size: 13px;
+    color: var(--c-secondary);
+}
+
+.browse-head {
+    margin-top: 22px;
+    padding-bottom: 6px;
+    font-size: 12px;
+    color: var(--c-muted);
+}
+
+.browse-head + .browse-list {
+    margin-top: 0;
+}
+
+.browse-row a.browse-link {
+    font-family: var(--font-ui);
+    font-size: 13px;
+    color: var(--c-link);
+}
+
+/* the Text | Speech toggle: links styled as the segmented control's buttons */
+.seg-control a {
+    white-space: nowrap;
+    padding: 5px 14px;
+    font-size: 13px;
+    text-decoration: none;
+    color: var(--c-secondary);
+}
+
+.seg-control a + a {
+    border-left: 1px solid var(--c-border-card);
+}
+
+.seg-control a.active {
+    background: var(--c-slate);
+    color: var(--c-surface);
+    font-weight: 600;
+}
+
+@media (max-width: 600px) {
+    .browse-head {
+        display: none;
+    }
+
+    .browse-speech .browse-col {
+        width: auto;
+    }
+}
+
 /* ============ Cregeen's Dictionary ============ */
 .dict-search {
     width: 100%;

@@ -10,8 +10,8 @@ export const confidenceBand = (
 ): "green" | "amber" | "red" =>
     confidence >= 90 ? "green" : confidence >= 60 ? "amber" : "red"
 
-/** "Human" or "AI 87%": every line says who transcribed it (D4, D30). Without
- * a confidence, a plain "AI" (a recording rather than a line) */
+/** "Human" or "AI · 87% confidence": every line says who transcribed it (D4,
+ * D30). Without a confidence, a plain "AI" (a recording rather than a line) */
 export const OriginBadge = (props: { origin?: Origin; confidence?: number }) =>
     props.origin == "asr" ? (
         props.confidence == null ? (
@@ -26,7 +26,7 @@ export const OriginBadge = (props: { origin?: Origin; confidence?: number }) =>
                 className={`speech-badge speech-badge-ai band-${confidenceBand(props.confidence)}`}
                 title={`AI-generated transcript, ${props.confidence}% confidence`}
             >
-                AI {props.confidence}%
+                AI · {props.confidence}% confidence
             </span>
         )
     ) : (
@@ -38,24 +38,26 @@ export const OriginBadge = (props: { origin?: Origin; confidence?: number }) =>
         </span>
     )
 
-/** The moment a line is spoken: a link into the source when it can seek, else
- * the time to find by hand, beside a link to the recording */
+/** The moment a line is spoken: a control playing it in the page (onSeek, an
+ * embedded player; onPlay, the popup player) when there is one, else a link
+ * into the source, or the time to find by hand */
 export const TimeLink = (props: {
     hit: SpeechHit
     seekable: boolean
     onSeek?: (time: number) => void
+    onPlay?: () => void
 }) => {
-    const { hit, seekable, onSeek } = props
+    const { hit, seekable, onSeek, onPlay } = props
     if (hit.time == null) {
         return null
     }
     const label = formatTime(hit.time)
-    if (onSeek) {
+    if (onSeek || onPlay) {
         return (
             <button
                 className="speech-time"
                 title="Play from here"
-                onClick={() => onSeek(hit.time ?? 0)}
+                onClick={() => (onSeek ? onSeek(hit.time ?? 0) : onPlay?.())}
             >
                 ▶ {label}
             </button>
@@ -92,6 +94,7 @@ export const SpeechLine = (props: {
     hit: SpeechHit
     seekable: boolean
     onSeek?: (time: number) => void
+    onPlay?: () => void
     showEnglish: boolean
 }) => {
     const { hit } = props
@@ -102,6 +105,7 @@ export const SpeechLine = (props: {
                     hit={hit}
                     seekable={props.seekable}
                     onSeek={props.onSeek}
+                    onPlay={props.onPlay}
                 />
             </span>
             <span className="speech-line-text">

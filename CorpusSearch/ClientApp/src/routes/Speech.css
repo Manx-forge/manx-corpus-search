@@ -201,6 +201,31 @@
     color: var(--c-muted);
 }
 
+/* ---- the player: popup from a search hit, docked on a recording page ---- */
+.speech-player-title {
+    font-family: var(--font-display);
+    font-size: 18px;
+    color: var(--c-heading);
+    margin-bottom: 12px;
+}
+
+.speech-player-audio {
+    display: block;
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+}
+
+.speech-player-line {
+    margin: 14px 0 8px;
+    color: var(--c-body-results);
+    line-height: 1.5;
+}
+
+.speech-player-links {
+    font-size: 13.5px;
+}
+
 /* ---- Contribute ---- */
 .contribute-page {
     max-width: 680px;

@@ -15,6 +15,7 @@ import { CircularProgress } from "@mui/material"
 import { SearchBar } from "../components/SearchBar"
 import { ManxEnglishSelector } from "../components/ManxEnglishSelector"
 import { SpeechLine } from "../components/SpeechLine"
+import { playable, SpeechPlayer } from "../components/SpeechPlayer"
 import { defaultSearchOptions } from "../api/SearchOptions"
 import { MAX_QUERY_LENGTH } from "../api/SearchApi"
 import {
@@ -23,6 +24,7 @@ import {
     platformNames,
     searchSpeech,
     SpeechFilters,
+    SpeechHit,
     SpeechRecording,
     SpeechSearchResponse,
     SpeechStatistics,
@@ -45,8 +47,6 @@ export const Speech = () => {
 
     const filters: SpeechFilters = {
         origin: (searchParams.get("origin") as Origin | null) ?? undefined,
-        minConfidence: Number(searchParams.get("minConfidence")) || undefined,
-        platform: searchParams.get("platform") ?? undefined,
     }
     const setParam = (key: string, value: string | undefined) => {
         const next = new URLSearchParams(searchParams)
@@ -126,38 +126,9 @@ export const Speech = () => {
                         value={filters.origin ?? ""}
                         onChange={(e) => setParam("origin", e.target.value)}
                     >
-                        <option value="">Anyone</option>
+                        <option value="">Any</option>
                         <option value="human">Human</option>
                         <option value="asr">AI</option>
-                    </select>
-                </label>
-                <label title="AI transcripts make mistakes: hide the less certain lines">
-                    AI lines
-                    <select
-                        className="corpus-select"
-                        value={filters.minConfidence ?? ""}
-                        onChange={(e) =>
-                            setParam("minConfidence", e.target.value)
-                        }
-                    >
-                        <option value="">All</option>
-                        <option value="60">Amber and green</option>
-                        <option value="90">Green only</option>
-                    </select>
-                </label>
-                <label>
-                    Source
-                    <select
-                        className="corpus-select"
-                        value={filters.platform ?? ""}
-                        onChange={(e) => setParam("platform", e.target.value)}
-                    >
-                        <option value="">All</option>
-                        {Object.entries(platformNames).map(([key, name]) => (
-                            <option key={key} value={key}>
-                                {name}
-                            </option>
-                        ))}
                     </select>
                 </label>
             </div>
@@ -274,8 +245,19 @@ const RecordingResult = (props: {
     showEnglish: boolean
 }) => {
     const { recording } = props
+    // the hit whose time was clicked: it plays in a popup, from that moment
+    const [playing, setPlaying] = useState<SpeechHit | null>(null)
     return (
         <li className="speech-recording">
+            {playing && (
+                <SpeechPlayer
+                    ident={recording.ident}
+                    name={recording.name}
+                    source={recording.source}
+                    hit={playing}
+                    onClose={() => setPlaying(null)}
+                />
+            )}
             <div className="speech-recording-head">
                 <Link
                     to={`/speech/${recording.ident}`}
@@ -298,6 +280,11 @@ const RecordingResult = (props: {
                         hit={hit}
                         seekable={recording.seekable}
                         showEnglish={props.showEnglish}
+                        onPlay={
+                            playable(hit, recording.source)
+                                ? () => setPlaying(hit)
+                                : undefined
+                        }
                     />
                 ))}
             </ul>

@@ -41,6 +41,9 @@ public partial class SpeechService
 
     public bool HasIdent(string ident) => works.ContainsKey(ident);
 
+    /// <summary>Every recording, for the Browse page</summary>
+    public IReadOnlyCollection<SpeechDocument> Works => works.Values.ToList();
+
     /// <summary>Indexes every work under <paramref name="path"/> (default: SpeechData beside the
     /// server). A missing directory leaves the speech corpus empty, with a warning</summary>
     public void Load(string? path)

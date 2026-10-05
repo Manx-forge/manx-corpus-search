@@ -43,6 +43,7 @@ export const SpeechWork = () => {
 const WorkPage = (props: { workPromise: Promise<Work | "error"> }) => {
     const work = use(props.workPromise)
     const player = useRef<Player>(null)
+    const audio = useRef<HTMLAudioElement>(null)
 
     useEffect(() => {
         if (work != "error") {
@@ -61,6 +62,23 @@ const WorkPage = (props: { workPromise: Promise<Work | "error"> }) => {
         )
     }
     const videoId = work.seekable ? youTubeId(work.source) : null
+    // not YouTube but the source's own audio file (mp3 #t= links): an audio player instead
+    const audioUrl =
+        videoId == null &&
+        work.lines[0]?.link?.match(/\.(mp3|m4a|ogg|wav)#t=\d+$/i)
+            ? work.lines[0].link.replace(/#t=\d+$/, "")
+            : null
+    const seek =
+        videoId != null
+            ? (t: number) => player.current?.seek(t)
+            : audioUrl != null
+              ? (t: number) => {
+                    if (audio.current) {
+                        audio.current.currentTime = t
+                        void audio.current.play()
+                    }
+                }
+              : undefined
     const hasEnglish = work.lines.some((x) => x.english)
     const origins = new Set(work.lines.map((x) => x.origin))
 
@@ -159,6 +177,17 @@ const WorkPage = (props: { workPromise: Promise<Work | "error"> }) => {
                     </div>
                 </div>
             )}
+            {audioUrl != null && (
+                <div className="video-dock">
+                    <audio
+                        ref={audio}
+                        className="speech-player-audio"
+                        src={audioUrl}
+                        controls
+                        preload="none"
+                    />
+                </div>
+            )}
             {!work.seekable && work.linkStatus == "ok" && work.source && (
                 <p className="speech-work-hint">
                     This source cannot be linked to a moment: open it and go to
@@ -172,11 +201,7 @@ const WorkPage = (props: { workPromise: Promise<Work | "error"> }) => {
                         hit={hit}
                         seekable={work.seekable}
                         showEnglish={hasEnglish}
-                        onSeek={
-                            videoId != null
-                                ? (t) => player.current?.seek(t)
-                                : undefined
-                        }
+                        onSeek={seek}
                     />
                 ))}
             </ul>

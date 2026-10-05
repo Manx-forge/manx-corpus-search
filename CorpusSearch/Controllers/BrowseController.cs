@@ -15,12 +15,15 @@ namespace CorpusSearch.Controllers;
 public class BrowseController(
     DocumentSearchService documentSearchService,
     WorkService workService,
+    SpeechService speech,
     IConfiguration configuration)
     : Controller
 {
-    public async Task<IActionResult> Index()
+    /// <param name="corpus">"speech": the speech corpus's recordings rather than the texts</param>
+    public async Task<IActionResult> Index(string? corpus = null)
     {
         ViewData["Documents"] = await workService.GetAll();
+        ViewData["Speech"] = corpus == "speech" ? speech.Works : null;
         ViewData["CanonicalUrl"] = SeoUrls.CanonicalBaseUrl(configuration, Request) + "/Browse";
         return View("~/Views/Browse/Index.cshtml");
     }

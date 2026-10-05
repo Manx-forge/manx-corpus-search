@@ -18,6 +18,12 @@ public class SpeechDocument : OpenSourceDocument
     /// <summary>Where the recording is published: youtube, manx_radio, learn_manx, ...</summary>
     public string? Platform { get; set; }
 
+    /// <summary>What it is about, as the inventory records it: education, podcast, interview, ...</summary>
+    public string? Domain { get; set; }
+
+    /// <summary>How it is spoken: read-speech, spoken_dictionary, monologue, dialogue, ...</summary>
+    public string? Style { get; set; }
+
     /// <summary>"human" or "asr": who transcribed it</summary>
     public string? Origin { get; set; }
 
