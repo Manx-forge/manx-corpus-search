@@ -89,6 +89,43 @@ export const Highlighted = (props: {
     highlights?: HighlightRange[]
 }) => <>{markChunks(props.text ?? "", props.highlights ?? [])}</>
 
+/** A long line cut to its first match with `words` words either side ("… ta
+ * mee goll …"), the highlights inside the cut moved to match; a line without
+ * highlights is kept. (The time link lands on that first match.) */
+export const excerpt = (
+    text: string,
+    highlights: HighlightRange[] | undefined,
+    words: number,
+): { text: string; highlights?: HighlightRange[] } => {
+    if (!highlights?.length) {
+        return { text, highlights }
+    }
+    const tokens = [...text.matchAll(/\S+/g)].map((m) => ({
+        start: m.index,
+        end: m.index + m[0].length,
+    }))
+    const first = tokens.findIndex((t) => t.end > highlights[0].start)
+    const last = tokens.filter((t) => t.start < highlights[0].end).length - 1
+    const from = Math.max(0, first - words)
+    const to = Math.min(tokens.length - 1, last + words)
+    if (first < 0 || (from == 0 && to == tokens.length - 1)) {
+        return { text, highlights }
+    }
+    const before = from > 0 ? "… " : ""
+    const shift = before.length - tokens[from].start
+    return {
+        text:
+            before +
+            text.slice(tokens[from].start, tokens[to].end) +
+            (to < tokens.length - 1 ? " …" : ""),
+        highlights: highlights
+            .filter(
+                (h) => h.start >= tokens[from].start && h.end <= tokens[to].end,
+            )
+            .map((h) => ({ start: h.start + shift, end: h.end + shift })),
+    }
+}
+
 /** One line of a recording: time, speaker, Manx (and English), and who transcribed it */
 export const SpeechLine = (props: {
     hit: SpeechHit
@@ -96,8 +133,17 @@ export const SpeechLine = (props: {
     onSeek?: (time: number) => void
     onPlay?: () => void
     showEnglish: boolean
+    /** search results: cut long lines to the matches and this many words either side */
+    context?: number
 }) => {
-    const { hit } = props
+    const { hit, context } = props
+    const manx = context
+        ? excerpt(hit.manx, hit.manxHighlights, context)
+        : { text: hit.manx, highlights: hit.manxHighlights }
+    const english =
+        context && hit.english
+            ? excerpt(hit.english, hit.englishHighlights, context)
+            : { text: hit.english, highlights: hit.englishHighlights }
     return (
         <li className="speech-line">
             <span className="speech-line-time">
@@ -114,15 +160,15 @@ export const SpeechLine = (props: {
                 )}
                 <span className="speech-manx">
                     <Highlighted
-                        text={hit.manx}
-                        highlights={hit.manxHighlights}
+                        text={manx.text}
+                        highlights={manx.highlights}
                     />
                 </span>
                 {props.showEnglish && hit.english && (
                     <span className="speech-english">
                         <Highlighted
-                            text={hit.english}
-                            highlights={hit.englishHighlights}
+                            text={english.text}
+                            highlights={english.highlights}
                         />
                     </span>
                 )}

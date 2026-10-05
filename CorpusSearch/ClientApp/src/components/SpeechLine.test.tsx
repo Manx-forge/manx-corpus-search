@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
-import { confidenceBand, OriginBadge, SpeechLine } from "./SpeechLine"
+import { confidenceBand, excerpt, OriginBadge, SpeechLine } from "./SpeechLine"
 import { formatTime, SpeechHit, youTubeId } from "../api/SpeechApi"
 
 afterEach(cleanup)
@@ -98,5 +98,36 @@ describe("youTubeId", () => {
         expect(youTubeId("https://youtu.be/abcdefghijk")).toBe("abcdefghijk")
         expect(youTubeId("https://example.org/a.mp3")).toBeNull()
         expect(youTubeId(undefined)).toBeNull()
+    })
+})
+
+describe("excerpt", () => {
+    const text = "a b c d e f moddey g h i j k"
+    const moddey = { start: 12, end: 18 }
+
+    it("cuts a long line to the match and its context, moving the highlight", () => {
+        const cut = excerpt(text, [moddey], 2)
+        expect(cut.text).toBe("… e f moddey g h …")
+        const h = cut.highlights?.[0] ?? { start: 0, end: 0 }
+        expect(cut.text.slice(h.start, h.end)).toBe("moddey")
+    })
+
+    it("centres on the first match, dropping later ones outside the cut", () => {
+        const long = "x x x moddey x x x x x x x x x x moddey"
+        const cut = excerpt(
+            long,
+            [
+                { start: 6, end: 12 },
+                { start: 33, end: 39 },
+            ],
+            2,
+        )
+        expect(cut.text).toBe("… x x moddey x x …")
+        expect(cut.highlights).toHaveLength(1)
+    })
+
+    it("keeps a line short enough already, or one without matches", () => {
+        expect(excerpt(text, [moddey], 20).text).toBe(text)
+        expect(excerpt(text, undefined, 2).text).toBe(text)
     })
 })

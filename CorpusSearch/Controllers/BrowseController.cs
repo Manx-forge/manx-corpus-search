@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using CorpusSearch.Model;
 using CorpusSearch.Service;
@@ -20,10 +21,21 @@ public class BrowseController(
     : Controller
 {
     /// <param name="corpus">"speech": the speech corpus's recordings rather than the texts</param>
-    public async Task<IActionResult> Index(string? corpus = null)
+    /// <param name="collection">with corpus=speech: one utterance collection's recordings</param>
+    public async Task<IActionResult> Index(string? corpus = null, string? collection = null)
     {
         ViewData["Documents"] = await workService.GetAll();
-        ViewData["Speech"] = corpus == "speech" ? speech.Works : null;
+        if (corpus == "speech")
+        {
+            // long-form recordings, with each collection of short utterances as one entry (or one collection's)
+            var collections = speech.UtteranceCollections();
+            var grouped = collections.Select(x => x.Key).ToHashSet();
+            ViewData["Speech"] = speech.Works.Where(x => collection != null
+                ? speech.CollectionOf(x) == collection
+                : !grouped.Contains(speech.CollectionOf(x))).ToList();
+            ViewData["Collections"] = collection == null ? collections : null;
+            ViewData["Collection"] = collections.FirstOrDefault(x => x.Key == collection);
+        }
         ViewData["CanonicalUrl"] = SeoUrls.CanonicalBaseUrl(configuration, Request) + "/Browse";
         return View("~/Views/Browse/Index.cshtml");
     }

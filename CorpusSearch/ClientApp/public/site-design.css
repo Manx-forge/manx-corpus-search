@@ -106,6 +106,12 @@
     text-align: right;
 }
 
+.browse-back {
+    display: inline-block;
+    margin-bottom: 10px;
+    font-size: 13.5px;
+}
+
 /* the speech listing (/Browse?corpus=speech): a column per piece of metadata, labelled by a header row */
 .browse-col {
     width: 110px;

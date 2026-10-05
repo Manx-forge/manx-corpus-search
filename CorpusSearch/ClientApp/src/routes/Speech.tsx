@@ -280,6 +280,7 @@ const RecordingResult = (props: {
                         hit={hit}
                         seekable={recording.seekable}
                         showEnglish={props.showEnglish}
+                        context={12}
                         onPlay={
                             playable(hit, recording.source)
                                 ? () => setPlaying(hit)

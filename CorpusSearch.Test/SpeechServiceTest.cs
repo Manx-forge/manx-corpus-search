@@ -72,6 +72,21 @@ public class SpeechServiceTest
             0,1,moddey,5.20,5.80,aligned
             0,2,beg,5.80,7.00,aligned
             """);
+        for (var i = 0; i < 10; i++)  // a collection of short utterances, as Common Voice's
+        {
+            Write($"common_voice/cv/cv-{i}", $$"""
+                {"ident": "speech-cv-{{i}}", "name": "Ta mee braew", "source": null, "platform": "common_voice",
+                 "origin": "human", "deep_link": null, "alt_urls": [], "link_status": "no URL recorded", "duration": 4.0}
+                """, """
+                Speaker,Manx,SubStart,SubEnd,Origin,Confidence
+                ,Ta mee braew,0.50,3.00,human,
+                """, """
+                line,idx,word,start,end,status
+                0,0,Ta,0.50,1.00,aligned
+                0,1,mee,1.00,1.50,aligned
+                0,2,braew,1.50,3.00,aligned
+                """);
+        }
         speech = new SpeechService(SearchParser.GetParser(), NullLogger<SpeechService>.Instance);
         speech.Load(root);
     }
@@ -180,6 +195,16 @@ public class SpeechServiceTest
         Assert.That(work.GitHubLink,
             Is.EqualTo("https://github.com/Manx-forge/manx-speech-corpus/tree/main/OpenData/youtube/demo/0001"));
         Assert.That(speech.GetWork("speech-9999"), Is.Null);
+    }
+
+    [Test]
+    public void ShortUtterancesGroupIntoACollectionAndLongRecordingsDoNot()
+    {
+        var collection = speech.UtteranceCollections().Single();
+        Assert.That(collection.Key, Is.EqualTo("common_voice/cv"));
+        Assert.That(collection.Count, Is.EqualTo(10));
+        Assert.That(collection.Platform, Is.EqualTo("common_voice"));
+        Assert.That(speech.CollectionOf(speech.Works.Single(x => x.Ident == "speech-0001")), Is.EqualTo("youtube/demo"));
     }
 
     [TestCase("https://youtu.be/abcdefghijk")]

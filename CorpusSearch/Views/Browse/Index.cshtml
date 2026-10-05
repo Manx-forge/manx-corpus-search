@@ -1,4 +1,5 @@
 @using CorpusSearch.Model
+@using CorpusSearch.Service
 
 <!doctype html>
 <html lang="en">
@@ -22,6 +23,9 @@
     var documents = ViewData["Documents"] as List<IDocument> ?? [];
     // the speech corpus's recordings, when ?corpus=speech asked for them
     var speech = ViewData["Speech"] as IReadOnlyCollection<SpeechDocument>;
+    // each collection of short utterances as one entry; or the one collection being listed
+    var collections = ViewData["Collections"] as List<SpeechService.Collection> ?? [];
+    var collection = ViewData["Collection"] as SpeechService.Collection;
     var platforms = new Dictionary<string, string>
     {
         ["youtube"] = "YouTube", ["manx_radio"] = "Manx Radio", ["learn_manx"] = "Learn Manx",
@@ -32,14 +36,20 @@
 @await Html.PartialAsync("_SiteHeader")
 
 <div class="page-main">
-    <h1 class="page-title">@(speech == null ? "Full Document Listing" : "Full Recording Listing")</h1>
+    <h1 class="page-title">@(speech == null ? "Full Document Listing" : collection?.Name ?? "Full Recording Listing")</h1>
+    @if (collection != null)
+    {
+        <a class="browse-back" href="/Browse?corpus=speech">← All recordings</a>
+    }
 
     <div class="browse-controls">
         <div class="seg-control">
             <a href="/Browse" class="@(speech == null ? "active" : null)">Text</a>
             <a href="/Browse?corpus=speech" class="@(speech != null ? "active" : null)">Speech</a>
         </div>
-        <div class="browse-count">@(speech == null ? $"{documents.Count:N0} documents" : $"{speech.Count:N0} recordings")</div>
+        <div class="browse-count">@(speech == null ? $"{documents.Count:N0} documents"
+                                     : collections.Count > 0 ? $"{speech.Count:N0} recordings and {collections.Count} collections"
+                                     : $"{speech.Count:N0} recordings")</div>
         <div class="browse-order">
             <span class="browse-order-label">Order by</span>
             <div class="seg-control">
@@ -61,6 +71,20 @@
         </div>
     }
     <div class="browse-list @(speech != null ? "browse-speech" : null)" id="browse-list">
+        @foreach (var group in collections)
+        {
+            <div class="browse-row" data-title="@group.Name">
+                <span class="browse-year"><span class="year-badge">@group.Count.ToString("N0")</span></span>
+                <span class="browse-text">
+                    <a href="/Browse?corpus=speech&collection=@Uri.EscapeDataString(group.Key)">@group.Name</a>
+                    <span class="browse-source">a collection of @group.Count.ToString("N0") short recordings</span>
+                </span>
+                <span class="browse-col">@(platforms.GetValueOrDefault(group.Platform ?? "", group.Platform ?? ""))</span>
+                <span class="browse-col">@group.Domain</span>
+                <span class="browse-col">@(group.Origin == "asr" ? "AI" : "Human")</span>
+                <span class="browse-col"></span>
+            </div>
+        }
         @if (speech != null)
         {
             @* dated first (most of the undated are single Common Voice sentences), then by title *@

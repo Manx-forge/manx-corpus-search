@@ -44,6 +44,37 @@ public partial class SpeechService
     /// <summary>Every recording, for the Browse page</summary>
     public IReadOnlyCollection<SpeechDocument> Works => works.Values.ToList();
 
+    /// <summary>A recording's collection: its folder's parent under OpenData ("common_voice/cv-24.0/validated")</summary>
+    public string CollectionOf(SpeechDocument work) =>
+        Path.GetDirectoryName(Path.GetRelativePath(root, work.LocationOnDisk ?? root))?.Replace('\\', '/') ?? "";
+
+    public record Collection(string Key, string Name, string? Platform, string? Domain, string? Origin, int Count);
+
+    /// <summary>Names for the utterance collections, where the folder's own is opaque</summary>
+    private static readonly Dictionary<string, string> CollectionNames = new()
+    {
+        ["common_voice/cv-24.0/validated"] = "Common Voice 24.0: read sentences",
+        ["common_voice/sps-2.0"] = "Common Voice Spontaneous Speech 2.0",
+        ["learn_manx/spkn_dict"] = "Learn Manx: Spoken Dictionary",
+        ["learn_manx/1000_words"] = "Learn Manx: 1000 Words",
+        ["youtube/learn_manx/island_of_culture"] = "Learn Manx: Island of Culture",
+    };
+
+    /// <summary>Collections of short utterances (single sentences, dictionary words): at least 10 recordings,
+    /// 80% of them under 30 s. Browse lists each as one entry rather than thousands of clips</summary>
+    public List<Collection> UtteranceCollections() => works.Values
+        .GroupBy(CollectionOf)
+        .Where(g => g.Count() >= 10 && g.Count(x => x.Duration is < 30) >= 0.8 * g.Count())
+        .Select(g => new Collection(g.Key,
+            CollectionNames.GetValueOrDefault(g.Key) ?? string.Join(": ", g.Key.Split('/').Skip(1)),
+            Common(g.Select(x => x.Platform)), Common(g.Select(x => x.Domain)), Common(g.Select(x => x.Origin)),
+            g.Count()))
+        .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+        .ToList();
+
+    private static string? Common(IEnumerable<string?> values) =>
+        values.Where(x => x != null).GroupBy(x => x).OrderByDescending(g => g.Count()).FirstOrDefault()?.Key;
+
     /// <summary>Indexes every work under <paramref name="path"/> (default: SpeechData beside the
     /// server). A missing directory leaves the speech corpus empty, with a warning</summary>
     public void Load(string? path)
