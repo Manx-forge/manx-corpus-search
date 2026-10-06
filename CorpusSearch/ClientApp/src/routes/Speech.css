@@ -130,8 +130,8 @@
 }
 
 .speech-badge-human {
-    color: var(--c-slate);
-    border-color: var(--c-border-meta);
+    color: #24481F;
+    background: #BCDBA9;
 }
 
 .speech-badge-ai {
