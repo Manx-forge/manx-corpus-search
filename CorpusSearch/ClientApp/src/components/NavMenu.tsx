@@ -68,16 +68,6 @@ export const NavMenu = (props: { onRefreshState: () => void }) => {
                             </Link>
                             <a href="/Dictionary/Cregeen">Dictionary</a>
                             <a href="/Browse">Browse All</a>
-                            <Link
-                                to="/contribute"
-                                className={
-                                    location.pathname == "/contribute"
-                                        ? "active"
-                                        : undefined
-                                }
-                            >
-                                Contribute
-                            </Link>
                         </>
                     )}
                     <a
