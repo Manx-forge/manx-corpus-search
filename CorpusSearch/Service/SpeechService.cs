@@ -211,7 +211,8 @@ public partial class SpeechService
     public record SearchResult(string Query, long NumberOfMatches, int NumberOfLines, int NumberOfRecordings,
         List<Recording> Recordings);
 
-    /// <summary>The recordings with the most matches first (at most <paramref name="maxRecordings"/>),
+    /// <summary>The recordings whose matched lines are most confident first, human lines above any AI
+    /// line's, then the most matches (at most <paramref name="maxRecordings"/>),
     /// each with its first <paramref name="linesPerRecording"/> matched lines</summary>
     public SearchResult Search(string query, SearchOptions options, Filter filter, int maxRecordings = 100,
         int linesPerRecording = 3)
@@ -220,7 +221,7 @@ public partial class SpeechService
             (ident, origin, confidence) => works.TryGetValue(ident, out var work) && filter.Accepts(work, origin, confidence),
             linesPerRecording);
         var recordings = documents
-            .OrderByDescending(x => x.Count).ThenBy(x => works[x.Ident].Name)
+            .OrderByDescending(x => x.Confidence).ThenByDescending(x => x.Count).ThenBy(x => works[x.Ident].Name)
             .Take(maxRecordings)
             .Select(x =>
             {

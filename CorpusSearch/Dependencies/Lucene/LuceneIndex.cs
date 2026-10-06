@@ -644,7 +644,13 @@ public class LuceneIndex(IndexWriter indexWriter)
 
     /// <summary>One document's share of <see cref="ScanLines"/>: its match count, its
     /// matched line count, and the matched lines shown</summary>
-    public sealed record LineScanDocument(Ident Ident, int Count, int MatchedLines, List<DocumentLine> Lines);
+    /// <param name="Confidence">the mean confidence of the matched lines, a human line counting
+    /// <see cref="HumanConfidence"/></param>
+    public sealed record LineScanDocument(Ident Ident, int Count, int MatchedLines, double Confidence,
+        List<DocumentLine> Lines);
+
+    /// <summary>A human line's confidence when ranking: above any AI line's</summary>
+    public const int HumanConfidence = 101;
 
     /// <summary>
     /// The speech search: <see cref="Scan"/> per line rather than per document. Only lines
@@ -683,6 +689,7 @@ public class LuceneIndex(IndexWriter indexWriter)
 
         var documents = byIdent.Select(kvp => new LineScanDocument(kvp.Key,
             kvp.Value.Sum(l => spanCollection.GetCount(l.DocId)), kvp.Value.Count,
+            kvp.Value.Average(l => lookup.Origin(l.DocId) == "human" ? HumanConfidence : lookup.Confidence(l.DocId) ?? 0),
             shown[kvp.Key].Select(docId =>
             {
                 var stored = reader.Document(docId, fields);
