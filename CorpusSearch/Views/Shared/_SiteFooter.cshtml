@@ -1,7 +1,20 @@
 <footer class="site-footer">
-    <span>
-        Maintained by David Allison · A Manx Language Research Group project<br/>
-        With thanks to <a href="/contributions">all the volunteers</a> who transcribe, translate &amp; contribute texts.
-    </span>
+    @* as the app's SiteFooter: Browse All's speech side credits the speech corpus *@
+    @if (ViewData["Speech"] != null)
+    {
+        <span>
+            The speech corpus is led and maintained by Chris Bartley as part of doctoral research into speech technology
+            for endangered languages at the University of Sheffield (<a href="https://chris-sj-bartley.github.io/">read more</a>).
+            Incorporated into the Manx Corpus in collaboration with <a href="https://github.com/david-allison">David Allison</a>.<br/>
+            With thanks to all the creators of the original recordings.
+        </span>
+    }
+    else
+    {
+        <span>
+            Maintained by David Allison · <a href="/speech">Speech corpus</a> by Chris Bartley<br/>
+            With thanks to <a href="/contributions">all the volunteers</a> who transcribe, translate &amp; contribute texts.
+        </span>
+    }
     <span><a href="https://github.com/david-allison/manx-corpus-search">Free &amp; open source on GitHub</a></span>
 </footer>
